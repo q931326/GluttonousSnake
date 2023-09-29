@@ -1,0 +1,344 @@
+#include<iostream>
+#include<time.h>
+#include<conio.h>
+#include<Windows.h>			//windows.h可不要
+#define MoveTime 100		//一百毫秒为基本移动时间单位
+#define N 22				//地图的长宽
+using namespace std;
+
+//全局变量
+auto StartTime = clock();	//定义起始时间
+UINT Judge = 0;				//用来判断是否吃到食物
+bool OneorZero = false;		//用来判断食物数量为1或0
+UINT SpeedNumber = 0;		//选择的速度等级
+UINT MapNumber = 0;			//选择的地图序号
+UINT Error;					//方向键盘吸收224 _getch()
+UINT UseMode = 1;			//选择方向键盘控制或者WASD控制
+
+//链表记录蛇的位置以及其移动坐标位置
+struct Position {
+	UCHAR CH;
+	Position* pointer;
+};
+//需一个链表头指针
+Position* Hpointer;
+//核心功能实现类
+class CentralWork {
+public:
+	//初始化定义蛇头以及初始地图
+	CentralWork() {
+		for (int i = 0; i != N; ++i)
+		{
+			for (int j = 0; j != N + 1; ++j)
+			{
+				Coordinate[i][j].pointer = nullptr;
+				if (i == 0 || i == N - 1)
+				{
+					Coordinate[i][j].CH = '=';
+				}
+				else if (j == 0 || j == N)
+					Coordinate[i][j].CH = '|';
+				else Coordinate[i][j].CH = ' ';
+			}
+		}
+		Coordinate[1][1].CH = '-';
+		Coordinate[1][2].CH = '@';
+		Coordinate[1][2].pointer = &Coordinate[1][1];
+		Coordinate[1][1].pointer = nullptr;
+		Hpointer = &Coordinate[1][2];
+		if (UseMode == 1)
+		{
+			this->MoveDirection = 77;
+			this->NowMoveDirection = 77;
+		}
+		else
+		{
+			this->MoveDirection = 'd';
+			this->NowMoveDirection = 'd';
+		}
+		this->FoodX = 0;
+		this->FoodY = 0;
+		this->HeadLevelPosition = 1;
+		this->HeadVerticalPosition = 2;
+		this->Score = 0;
+		this->AteFoodNumber = 0;
+		this->MapX = 0;
+		this->MapY = 0;
+
+	}
+	//静态成员函数，介绍使用方法
+	void static MenuAndMe() {
+		cout << "\n\n\t\t\t\t\t\t简介：\n\n";
+		cout << "\t\t\t\t\t8个难度，分别为0.1~0.8秒移动一次\n\n";
+		cout << "\t\t\t\t\t创作4张简单地图，每张地图障碍物位置不相同\n\n";
+		cout << "\t\t\t\t\t下面选择操作方式、难度以及地图\n\n";
+		cout << "\t\t\t\t\t请按任意键继续...\n\n";
+		Error = _getch();
+		cin.clear();
+		system("cls");
+		cout << "\n\n\t\t\t\t\t\t操作方式选择：\n\n";
+		cout << "\t\t\t\t\t0、WASD操作（游戏过程中不可暂停）\n\n\t\t\t\t\t1、↑↓←→操作（游戏过程中可摁非方向盘键暂停）\n\n";
+		cin >> UseMode;
+		cin.clear();
+		system("cls");
+		cout << "\n\n\t\t\t\t\t\t难度选择:\n\n";
+		cout << "\t\t\t\t\t0、根据长度自动增长速度\n\n\t\t\t\t\t1、100ms移动一次\n\n\t\t\t\t\t2、200ms移动一次\n\n\t\t\t\t\t3、300ms移动一次\n\n\t\t\t\t\t4、400ms移动一次\n\n\t\t\t\t\t5、500ms移动一次\n\n\t\t\t\t\t6、600ms移动一次\n\n\t\t\t\t\t7、700ms移动一次\n\n\t\t\t\t\t8、800ms移动一次\n\n";
+		cin >> SpeedNumber;
+		cin.clear();
+		while (SpeedNumber > 8)
+		{
+			cin.clear();
+			cout << "输入数据有误，请重新输入！\n";
+			cin >> SpeedNumber;
+			cin.clear();
+		}
+		system("cls");
+		cout << "\n\n\t\t\t\t\t\t 地图选择";
+		cout << "\n\n\t\t\t\t\t0、空地图\n\n\t\t\t\t\t1、A地图\n\n\t\t\t\t\t2、B地图\n\n\t\t\t\t\t3、C地图\n\n\t\t\t\t\t4、D地图（50个随机障碍）\n\n";
+		cin >> MapNumber;
+		while (MapNumber > 4)
+		{
+			cin.clear();
+			cout << "输入数据有误，请重新输入！\n";
+			cin >> MapNumber;
+			cin.clear();
+		}
+		system("cls");
+
+	}
+	//根据地图标号改变地图障碍
+	void FormMap() {
+		if (MapNumber == 1)
+		{
+			for (int i = 1; i != N / 2; ++i)
+			{
+				if (!(i == 11 || i == 10 || i == 9))
+				{
+					Coordinate[11][i].CH = '#';
+					Coordinate[11][N - i].CH = '#';
+					Coordinate[N - i][11].CH = '#';
+					Coordinate[i][11].CH = '#';
+				}
+			}
+		}
+		if (MapNumber == 2)
+		{
+			for (int i = 1; i <= 7; ++i)
+			{
+				Coordinate[13][i].CH = '#';
+				Coordinate[10][i].CH = '#';
+				Coordinate[13][N - i].CH = '#';
+				Coordinate[10][N - i].CH = '#';
+				Coordinate[N - i][8].CH = '#';
+				Coordinate[N - i][14].CH = '#';
+				Coordinate[i][8].CH = '#';
+				Coordinate[i][14].CH = '#';
+
+			}
+		}
+		if (MapNumber == 3)
+		{
+			for (int i = 1; i <= 6; ++i)
+			{
+				Coordinate[14][i].CH = '#';
+				Coordinate[8][i].CH = '#';
+				Coordinate[14][N - i].CH = '#';
+				Coordinate[8][N - i].CH = '#';
+				Coordinate[N - i][8].CH = '#';
+				Coordinate[N - i][14].CH = '#';
+				Coordinate[i][8].CH = '#';
+				Coordinate[i][14].CH = '#';
+
+			}
+			for (int i = 8; i <= 14; ++i)
+			{
+				Coordinate[i][i].CH = '#';
+				Coordinate[i][N - i].CH = '#';
+			}
+			Coordinate[11][11].CH = ' ';
+		}
+		if (MapNumber == 4)
+		{
+			srand(time(NULL));
+			for (int i = 0; i != 50; ++i)
+			{
+				MapX = rand() % N;
+				MapY = rand() % N;
+				if (Coordinate[MapX][MapY].CH == ' ' && (MapX != 1 || MapY != 3))
+					Coordinate[MapX][MapY].CH = '=';
+				else --i;
+			}
+
+		}
+	}
+	//输出地图
+	void OutPutFrameWork()
+	{
+		cout << "\t\t\t\t\t\t\t当前的长度：" << AteFoodNumber << "\n\t\t\t\t\t\t\t当前得分：" << Score << endl;
+		for (int i = 0; i != N; ++i)
+		{
+			cout << "\t\t\t\t\t";
+			for (int j = 0; j != N + 1; ++j)
+			{
+
+				cout << Coordinate[i][j].CH << " ";
+			}
+			cout << endl;
+		}
+
+	}
+	//判断蛇是否牺牲
+	UCHAR JudgeSnakeOver() {
+		if (Coordinate[HeadLevelPosition][HeadVerticalPosition].CH == '|'
+			|| Coordinate[HeadLevelPosition][HeadVerticalPosition].CH == '='
+			|| (Coordinate[HeadLevelPosition][HeadVerticalPosition].CH == '-')
+			|| (Coordinate[HeadLevelPosition][HeadVerticalPosition].CH == '#'))
+			return 0;
+		else if (Coordinate[HeadLevelPosition][HeadVerticalPosition].CH == '*')
+			return 2;
+		else return 1;
+	}
+	//改变蛇身的位置
+	bool SnakeChange(UINT& Judge) {
+		if (Judge == 1) {
+			Coordinate[HeadLevelPosition][HeadVerticalPosition].CH = '@';
+			Coordinate[HeadLevelPosition][HeadVerticalPosition].pointer = Hpointer;
+			Hpointer->CH = '-';
+			Hpointer = Coordinate[HeadLevelPosition][HeadVerticalPosition].pointer;
+			while (Hpointer->pointer->pointer && Hpointer->CH == '-')
+			{
+				Hpointer = Hpointer->pointer;
+			}
+			Hpointer->pointer->CH = ' ';
+			Hpointer->pointer = nullptr;
+			Hpointer = &Coordinate[HeadLevelPosition][HeadVerticalPosition];
+			return true;
+		}
+		else if (Judge == 2)
+		{
+			++AteFoodNumber;
+			if (SpeedNumber == 0)
+				Score += AteFoodNumber / 5 + 1;
+			else Score += 9 - SpeedNumber;
+			Coordinate[HeadLevelPosition][HeadVerticalPosition].CH = '@';
+			Coordinate[HeadLevelPosition][HeadVerticalPosition].pointer = Hpointer;
+			Hpointer->CH = '-';
+			Hpointer = &Coordinate[HeadLevelPosition][HeadVerticalPosition];
+			return false;
+		}
+
+	}
+	//根据摁键改变舌头位置
+	void SnakeMove() {
+		if (SpeedNumber)
+			while ((Judge = (clock() - StartTime <= MoveTime * SpeedNumber)) && !_kbhit());
+		else  if (SpeedNumber == 0 && AteFoodNumber <= 35) while ((Judge = (clock() - StartTime <= MoveTime * (8 - AteFoodNumber / 5))) && !_kbhit());
+		else  if (SpeedNumber == 0 && AteFoodNumber > 35) while ((Judge = (clock() - StartTime <= MoveTime)) && !_kbhit());
+
+		if (UseMode == 1)
+		{
+			if (Judge)
+			{
+				Error = _getch();
+				NowMoveDirection = _getch();
+			}
+			switch (NowMoveDirection)
+			{
+				//反方向摁键时无效果，原方向向前移动一格
+			case 72: if (MoveDirection != 80)  this->MoveDirection = NowMoveDirection; break;	//↑
+			case 75: if (MoveDirection != 77)  this->MoveDirection = NowMoveDirection; break;	//←
+			case 80: if (MoveDirection != 72)  this->MoveDirection = NowMoveDirection; break;	//↓
+			case 77: if (MoveDirection != 75)  this->MoveDirection = NowMoveDirection; break;	//→
+			default: NowMoveDirection = MoveDirection; break;
+			}
+			switch (MoveDirection)
+			{
+			case 75: 	HeadVerticalPosition--; break;
+			case 77:	HeadVerticalPosition++; break;
+			case 72:	HeadLevelPosition--; break;
+			case 80:	HeadLevelPosition++; break;
+			default:    break;
+			}
+		}
+
+
+		else
+		{
+			if (Judge)
+			{
+				//_getch();
+				NowMoveDirection = _getch();
+			}
+			switch (NowMoveDirection)
+			{
+				//反方向摁键时无效果，原方向向前移动一格
+			case 'W':case 'w': if (MoveDirection != 'S' && MoveDirection != 's')  this->MoveDirection = NowMoveDirection; break;	//↑
+			case 'A':case 'a': if (MoveDirection != 'D' && MoveDirection != 'd')  this->MoveDirection = NowMoveDirection;	break;						//←
+			case 'S':case 's': if (MoveDirection != 'W' && MoveDirection != 'w')  this->MoveDirection = NowMoveDirection; break;							//↓
+			case 'D':case 'd': if (MoveDirection != 'A' && MoveDirection != 'a')  this->MoveDirection = NowMoveDirection; break;							//→
+			default: NowMoveDirection = MoveDirection; break;
+			}
+			switch (MoveDirection)
+			{
+			case 'A':case 'a': 	HeadVerticalPosition--; break;			//←
+			case 'D':case 'd':	HeadVerticalPosition++; break;			//→ 
+			case 'W':case 'w':	HeadLevelPosition--;    break;			//↑
+			case 'S':case 's':	HeadLevelPosition++;    break;			//↓
+			default:            break;
+			}
+		}
+	}
+	//食物产生函数
+	void FoodEmerge(bool OneorZero) {
+		if (!OneorZero)
+		{
+			srand(time(NULL));
+			while (Coordinate[FoodX][FoodY].CH != ' ')
+			{
+				FoodX = rand() % N;
+				FoodY = rand() % N;
+			}
+			Coordinate[FoodX][FoodY].CH = '*';
+		}
+	}
+	//牺牲后输出游戏结果
+	void Defate() {
+		cout << "\t\t\t\t\t\t\tGAMEOVER!\n  " << endl;
+		cout << "\t\t\t\t\t\t\t你的最终得分：" << Score << endl;;
+	}
+
+private:
+	Position Coordinate[N][N + 1];
+	UINT FoodX;
+	UINT FoodY;
+	UCHAR MoveDirection;
+	UCHAR NowMoveDirection;
+	UINT HeadLevelPosition;
+	UINT HeadVerticalPosition;
+	UINT AteFoodNumber;
+	UINT Score;
+	UINT MapX;
+	UINT MapY;
+};
+
+int main() {
+	CentralWork::MenuAndMe();
+	CentralWork Begin;
+	Begin.FormMap();
+	while (1)
+	{
+
+		StartTime = clock();
+		Begin.FoodEmerge(OneorZero);
+		Begin.SnakeMove();
+		Judge = Begin.JudgeSnakeOver();
+		OneorZero = Begin.SnakeChange(Judge);
+		system("cls");
+		Begin.OutPutFrameWork();
+		if (Judge == 0)
+			break;
+	}
+	Begin.Defate();
+	return 0;
+}
+
